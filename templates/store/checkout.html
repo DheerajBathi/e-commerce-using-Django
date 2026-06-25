@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Checkout - AuraShop{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 style="font-family: var(--font-heading); font-size: 32px; margin-top: 40px; font-weight: 800; margin-bottom: 10px;">Secure Checkout</h1>
+    
+    <div class="checkout-layout">
+        
+        <!-- Left Side: Shipping & Mock Payment Form -->
+        <div>
+            <div class="form-panel glass-panel" style="margin-bottom: 30px;">
+                <h3 class="form-title" style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-truck-fast" style="color: var(--accent-primary);"></i> Shipping Information
+                </h3>
+                
+                <form id="checkout-form" method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label for="id_name">Full Name</label>
+                        <input type="text" id="id_name" name="name" class="form-control" placeholder="John Doe" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_email">Email Address</label>
+                        <input type="email" id="id_email" name="email" class="form-control" placeholder="john@example.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_address">Shipping Address</label>
+                        <input type="text" id="id_address" name="address" class="form-control" placeholder="123 Luxury Ave, Apt 4B" required>
+                    </div>
+
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label for="id_city">City</label>
+                            <input type="text" id="id_city" name="city" class="form-control" placeholder="New York" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="id_zipcode">Zip Code / Postal Code</label>
+                            <input type="text" id="id_zipcode" name="zipcode" class="form-control" placeholder="10001" required>
+                        </div>
+                    </div>
+
+                    <!-- Mock Payment Section -->
+                    <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 24px;">
+                        <h3 class="form-title" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                            <i class="fa-solid fa-credit-card" style="color: var(--accent-primary)"></i> Payment Details
+                        </h3>
+                        
+                        <div class="form-group">
+                            <label>Cardholder Name</label>
+                            <input type="text" class="form-control" placeholder="John Doe">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Card Number</label>
+                            <div style="position: relative;">
+                                <input type="text" class="form-control" placeholder="4111 2222 3333 4444" style="padding-right: 45px;">
+                                <i class="fa-brands fa-cc-visa" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 20px; color: var(--text-secondary);"></i>
+                            </div>
+                        </div>
+
+                        <div class="form-row" style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px;">
+                            <div class="form-group">
+                                <label>Expiration Date</label>
+                                <input type="text" class="form-control" placeholder="MM / YY">
+                            </div>
+                            <div class="form-group">
+                                <label>CVV</label>
+                                <input type="password" class="form-control" placeholder="***">
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(124, 58, 237, 0.05); border: 1px solid var(--border-glow); padding: 12px; border-radius: var(--radius-sm); font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-shield-halved" style="color: var(--accent-primary)"></i>
+                            <span>This is a simulated checkout page. Real payment info is not transmitted.</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary summary-btn" style="padding: 12px; margin-top: 10px;">
+                        Place Order (${{ grand_total }})
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Side: Order Summary Panel -->
+        <div>
+            <div class="summary-panel glass-panel">
+                <h3 class="summary-title">Items in Order</h3>
+                
+                <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px; padding-right: 8px;">
+                    {% for item in cart_items %}
+                        <div class="checkout-summary-item">
+                            <img src="{{ item.product.get_image_url }}" alt="{{ item.product.name }}">
+                            <div class="checkout-summary-details">
+                                <h4 class="checkout-summary-title">{{ item.product.name }}</h4>
+                                <span class="checkout-summary-qty">Qty: {{ item.quantity }}</span>
+                            </div>
+                            <div class="checkout-summary-total">${{ item.total }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="summary-row" style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+                    <span>Subtotal</span>
+                    <span>${{ subtotal }}</span>
+                </div>
+                
+                <div class="summary-row">
+                    <span>Shipping & Handling</span>
+                    <span>
+                        {% if shipping_cost == 0 %}
+                            Free Shipping
+                        {% else %}
+                            ${{ shipping_cost }}
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="summary-row total">
+                    <span>Total Order</span>
+                    <span>${{ grand_total }}</span>
+                </div>
+                
+                <a href="{% url 'store:cart_view' %}" class="btn-secondary" style="width: 100%; text-align: center; display: block; margin-top: 16px; font-size: 14px;">
+                    <i class="fa-solid fa-arrow-left-long"></i> Back to Cart
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

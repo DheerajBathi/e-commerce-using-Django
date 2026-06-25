@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }} - AuraShop Detail{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    <!-- Detail grid -->
+    <div class="detail-grid">
+        <!-- Left Column: Product Image -->
+        <div class="detail-img-container glass-panel">
+            <img src="{{ product.get_image_url }}" alt="{{ product.name }}" class="detail-img">
+        </div>
+
+        <!-- Right Column: Product Info -->
+        <div class="detail-info">
+            <div class="detail-category">{{ product.category.name }}</div>
+            <h1 class="detail-title">{{ product.name }}</h1>
+
+            <!-- Meta: Rating & Stock -->
+            <div class="detail-meta">
+                <div class="product-rating" style="margin-bottom: 0;">
+                    {% with rating=product.average_rating %}
+                        {% if rating > 0 %}
+                            <i class="fa-solid fa-star"></i>
+                            <span>{{ rating }} ★ ({{ reviews.count }} review{{ reviews.count|pluralize }})</span>
+                        {% else %}
+                            <i class="fa-regular fa-star" style="color: var(--text-muted);"></i>
+                            <span style="color: var(--text-muted);">No reviews yet</span>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+
+            <!-- Price -->
+            <div class="detail-price">${{ product.price }}</div>
+
+            <!-- Description -->
+            <p class="detail-description">{{ product.description|default:"No description provided for this premium item." }}</p>
+
+            <!-- Stock status indicator -->
+            <div class="stock-status">
+                {% if product.stock <= 0 %}
+                    <span class="stock-dot out-of-stock"></span>
+                    <span style="color: var(--danger); font-weight: 600;">Out of Stock</span>
+                {% elif product.stock < 5 %}
+                    <span class="stock-dot low-stock"></span>
+                    <span style="color: var(--warning); font-weight: 600;">Only {{ product.stock }} items left!</span>
+                {% else %}
+                    <span class="stock-dot in-stock"></span>
+                    <span style="color: var(--success); font-weight: 600;">In Stock ({{ product.stock }} available)</span>
+                {% endif %}
+            </div>
+
+            <!-- Cart Addition Controls -->
+            {% if product.stock > 0 %}
+                <form action="{% url 'store:cart_add' product.id %}" method="GET" style="margin-top: 10px;">
+                    <div class="qty-selector">
+                        <span style="color: var(--text-secondary); font-size: 14px; font-weight: 500;">Quantity:</span>
+                        <button type="button" class="qty-btn" id="qty-minus">-</button>
+                        <input type="number" name="quantity" id="qty-input" class="qty-input" value="1" min="1" max="{{ product.stock }}" readonly>
+                        <button type="button" class="qty-btn" id="qty-plus">+</button>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="padding: 12px 30px;">
+                        <i class="fa-solid fa-cart-arrow-down"></i> Add to Cart
+                    </button>
+                </form>
+            {% else %}
+                <button class="btn-primary" style="opacity: 0.5; cursor: not-allowed; padding: 12px 30px; margin-top: 10px;" disabled>
+                    <i class="fa-solid fa-ban"></i> Out of Stock
+                </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Reviews Section -->
+    <section class="reviews-section">
+        <h2 style="font-family: var(--font-heading); font-size: 26px;">Customer Reviews</h2>
+        
+        <div class="reviews-grid">
+            <!-- Left Side: Existing Reviews -->
+            <div>
+                {% if reviews %}
+                    {% for review in reviews %}
+                        <div class="review-card glass-panel">
+                            <div class="review-header">
+                                <span class="review-author">{{ review.name }}</span>
+                                <span class="review-date">{{ review.created_at|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="review-rating">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= review.rating %}
+                                        <i class="fa-solid fa-star"></i>
+                                    {% else %}
+                                        <i class="fa-regular fa-star" style="color: var(--text-muted);"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <p class="review-comment">{{ review.comment }}</p>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: var(--text-secondary); font-style: italic; margin-top: 20px;">No reviews yet. Be the first to share your thoughts!</p>
+                {% endif %}
+            </div>
+
+            <!-- Right Side: Submit Review Form -->
+            <div>
+                <div class="form-panel glass-panel">
+                    <h3 class="form-title">Write a Review</h3>
+                    <form action="{% url 'store:add_review' product.slug %}" method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label>Rating</label>
+                            <div class="star-rating">
+                                <input type="radio" id="star5" name="rating" value="5" checked><label for="star5" title="5 stars"><i class="fa-solid fa-star"></i></label>
+                                <input type="radio" id="star4" name="rating" value="4"><label for="star4" title="4 stars"><i class="fa-solid fa-star"></i></label>
+                                <input type="radio" id="star3" name="rating" value="3"><label for="star3" title="3 stars"><i class="fa-solid fa-star"></i></label>
+                                <input type="radio" id="star2" name="rating" value="2"><label for="star2" title="2 stars"><i class="fa-solid fa-star"></i></label>
+                                <input type="radio" id="star1" name="rating" value="1"><label for="star1" title="1 star"><i class="fa-solid fa-star"></i></label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="id_name">Your Name</label>
+                            <input type="text" id="id_name" name="name" class="form-control" placeholder="John Doe" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="id_email">Email Address</label>
+                            <input type="email" id="id_email" name="email" class="form-control" placeholder="john@example.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="id_comment">Comments</label>
+                            <textarea id="id_comment" name="comment" class="form-control" placeholder="What did you like or dislike about this product?" required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">
+                            Submit Review
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Related Products -->
+    {% if related_products %}
+        <section style="margin: 60px 0 40px 0; border-top: 1px solid var(--border-color); padding-top: 40px;">
+            <h2 style="font-family: var(--font-heading); font-size: 26px; margin-bottom: 30px;">Related Products</h2>
+            <div class="products-grid">
+                {% for r_product in related_products %}
+                    <div class="product-card glass-panel">
+                        <div class="product-img-wrapper">
+                            <a href="{% url 'store:product_detail' r_product.slug %}">
+                                <img src="{{ r_product.get_image_url }}" alt="{{ r_product.name }}" class="product-img">
+                            </a>
+                        </div>
+                        <div class="product-body">
+                            <a href="{% url 'store:product_detail' r_product.slug %}">
+                                <h3 class="product-title">{{ r_product.name }}</h3>
+                            </a>
+                            <div class="product-price-wrapper">
+                                <div class="product-price">${{ r_product.price }}</div>
+                                <a href="{% url 'store:product_detail' r_product.slug %}" class="btn-icon">
+                                    <i class="fa-solid fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const minusBtn = document.getElementById('qty-minus');
+        const plusBtn = document.getElementById('qty-plus');
+        const input = document.getElementById('qty-input');
+        
+        if (minusBtn && plusBtn && input) {
+            const maxVal = parseInt(input.getAttribute('max')) || 1;
+            
+            minusBtn.addEventListener('click', () => {
+                let current = parseInt(input.value) || 1;
+                if (current > 1) {
+                    input.value = current - 1;
+                }
+            });
+            
+            plusBtn.addEventListener('click', () => {
+                let current = parseInt(input.value) || 1;
+                if (current < maxVal) {
+                    input.value = current + 1;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Shopping Cart - AuraShop{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 style="font-family: var(--font-heading); font-size: 32px; margin-top: 40px; font-weight: 800;">Shopping Cart</h1>
+    
+    {% if cart_items %}
+        <div class="cart-layout">
+            <!-- Left Side: List of Items -->
+            <div class="cart-items-list">
+                {% for item in cart_items %}
+                    <div class="cart-item glass-panel" id="cart-item-row-{{ item.product.id }}">
+                        
+                        <!-- Item Image -->
+                        <img src="{{ item.product.get_image_url }}" alt="{{ item.product.name }}" class="cart-item-img">
+                        
+                        <!-- Item Details -->
+                        <div class="cart-item-details">
+                            <a href="{% url 'store:product_detail' item.product.slug %}" class="cart-item-title">{{ item.product.name }}</a>
+                            <span class="cart-item-price">${{ item.product.price }}</span>
+                        </div>
+
+                        <!-- Quantity Selector (AJAX integrated) -->
+                        <div class="cart-item-qty">
+                            <button type="button" class="ajax-qty-btn" data-product-id="{{ item.product.id }}" data-action="minus">-</button>
+                            <span id="qty-display-{{ item.product.id }}">{{ item.quantity }}</span>
+                            <button type="button" class="ajax-qty-btn" data-product-id="{{ item.product.id }}" data-action="plus" data-max="{{ item.product.stock }}">+</button>
+                        </div>
+
+                        <!-- Total & Remove Button -->
+                        <div class="cart-item-total-remove">
+                            <div class="cart-item-total" id="item-total-{{ item.product.id }}">${{ item.total }}</div>
+                            <a href="{% url 'store:cart_remove' item.product.id %}" class="btn-icon" style="color: var(--danger);" title="Remove Item">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </a>
+                        </div>
+
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Right Side: Order Summary Panel -->
+            <div>
+                <div class="summary-panel glass-panel">
+                    <h3 class="summary-title">Order Summary</h3>
+                    
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span id="summary-subtotal">${{ subtotal }}</span>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <span>Shipping & Handling</span>
+                        <span id="summary-shipping">
+                            {% if shipping_cost == 0 %}
+                                Free Shipping
+                            {% else %}
+                                ${{ shipping_cost }}
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="summary-row" style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">
+                        <span>Free shipping on orders over $100</span>
+                    </div>
+                    
+                    <div class="summary-row total">
+                        <span>Total</span>
+                        <span id="summary-grand-total">${{ grand_total }}</span>
+                    </div>
+                    
+                    <a href="{% url 'store:checkout' %}" class="btn-primary summary-btn">
+                        Proceed to Checkout <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Empty Cart State -->
+        <div class="empty-state glass-panel">
+            <div class="empty-icon">
+                <i class="fa-solid fa-cart-flatbed-suitcases"></i>
+            </div>
+            <h3>Your Cart is Empty</h3>
+            <p>Looks like you haven't added anything to your cart yet. Head back to the store to find premium deals.</p>
+            <a href="{% url 'store:store_view' %}" class="btn-primary">Start Shopping</a>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const qtyButtons = document.querySelectorAll('.ajax-qty-btn');
+        
+        qtyButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const productId = button.getAttribute('data-product-id');
+                const action = button.getAttribute('data-action');
+                const qtySpan = document.getElementById(`qty-display-${productId}`);
+                let currentQty = parseInt(qtySpan.textContent);
+                
+                let targetQty = currentQty;
+                if (action === 'plus') {
+                    const maxStock = parseInt(button.getAttribute('data-max'));
+                    if (currentQty < maxStock) {
+                        targetQty = currentQty + 1;
+                    } else {
+                        showToast("Maximum available stock reached.", "warning");
+                        return;
+                    }
+                } else if (action === 'minus') {
+                    targetQty = currentQty - 1;
+                }
+                
+                // Perform dynamic AJAX session update
+                updateCartQuantity(productId, targetQty);
+            });
+        });
+
+        function updateCartQuantity(productId, quantity) {
+            const formData = new FormData();
+            formData.append('product_id', productId);
+            formData.append('quantity', quantity);
+            
+            // Django csrf token
+            const csrfToken = '{{ csrf_token }}';
+            
+            fetch("{% url 'store:cart_update' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (quantity <= 0) {
+                        // Remove item row if quantity set to 0
+                        const row = document.getElementById(`cart-item-row-${productId}`);
+                        if (row) {
+                            row.style.transition = 'all 0.5s ease';
+                            row.style.opacity = '0';
+                            row.style.transform = 'scale(0.9)';
+                            setTimeout(() => {
+                                row.remove();
+                                // Reload page if cart empty
+                                if (data.cart_count === 0) {
+                                    window.location.reload();
+                                }
+                            }, 500);
+                        }
+                    } else {
+                        // Update display values
+                        const qtySpan = document.getElementById(`qty-display-${productId}`);
+                        const totalSpan = document.getElementById(`item-total-${productId}`);
+                        if (qtySpan) qtySpan.textContent = quantity;
+                        if (totalSpan) totalSpan.textContent = `$${data.item_total.toFixed(2)}`;
+                    }
+
+                    // Update summary side panel
+                    document.getElementById('summary-subtotal').textContent = `$${data.subtotal.toFixed(2)}`;
+                    
+                    const shippingSpan = document.getElementById('summary-shipping');
+                    if (data.shipping_cost === 0) {
+                        shippingSpan.textContent = 'Free Shipping';
+                    } else {
+                        shippingSpan.textContent = `$${data.shipping_cost.toFixed(2)}`;
+                    }
+                    
+                    document.getElementById('summary-grand-total').textContent = `$${data.grand_total.toFixed(2)}`;
+                    
+                    // Update global cart badge
+                    const badge = document.getElementById('cart-badge-count');
+                    if (badge) badge.textContent = data.cart_count;
+                } else {
+                    showToast(data.error || "An error occurred updating the cart.", "error");
+                }
+            })
+            .catch(error => {
+                console.error("Cart update failed:", error);
+                showToast("Request failed. Please try again.", "error");
+            });
+        }
+
+        function showToast(message, type) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `message-toast glass-panel ${type}`;
+            
+            let iconClass = 'fa-circle-check';
+            let iconColor = 'var(--success)';
+            if (type === 'warning') {
+                iconClass = 'fa-circle-exclamation';
+                iconColor = 'var(--warning)';
+            } else if (type === 'error') {
+                iconClass = 'fa-circle-xmark';
+                iconColor = 'var(--danger)';
+            }
+
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass}" style="color: ${iconColor}"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                setTimeout(() => toast.remove(), 600);
+            }, 3000);
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Storefront - AuraShop Premium Catalog{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    <!-- Hero Header -->
+    <section class="hero-section">
+        <div class="hero-glow"></div>
+        <h1 class="hero-title">Experience <span>Tomorrow</span> Today</h1>
+        <p class="hero-subtitle">Discover our highly curated collection of state-of-the-art products. Designed with precision, styled for elegance, and engineered for lifetime performance.</p>
+    </section>
+
+    <!-- Filters, Category Tabs & Sorting -->
+    <div class="filters-bar">
+        <div class="category-tabs">
+            <a href="?{% if query %}q={{ query }}&{% endif %}{% if sort_by %}sort_by={{ sort_by }}&{% endif %}" 
+               class="tab-btn {% if not selected_category %}active{% endif %}">
+                All Products
+            </a>
+            {% for cat in categories %}
+                <a href="?category={{ cat.slug }}{% if query %}&q={{ query }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}" 
+                   class="tab-btn {% if selected_category.id == cat.id %}active{% endif %}">
+                    {{ cat.name }}
+                </a>
+            {% endfor %}
+        </div>
+
+        <div class="sort-select-wrapper">
+            <form id="sort-form" method="GET">
+                {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+                {% if selected_category %}<input type="hidden" name="category" value="{{ selected_category.slug }}">{% endif %}
+                <select name="sort_by" onchange="document.getElementById('sort-form').submit();">
+                    <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Sort by: Newest</option>
+                    <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
+                    <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <!-- Products Catalog Grid -->
+    {% if products %}
+        <div class="products-grid">
+            {% for product in products %}
+                <div class="product-card glass-panel">
+                    
+                    <!-- Product Image Container -->
+                    <div class="product-img-wrapper">
+                        <a href="{% url 'store:product_detail' product.slug %}">
+                            <img src="{{ product.get_image_url }}" alt="{{ product.name }}" class="product-img" loading="lazy">
+                        </a>
+                        <!-- Category/Status Overlay Badge -->
+                        <div class="product-overlay">
+                            {% if product.stock <= 0 %}
+                                <span class="tag-badge out-of-stock">Sold Out</span>
+                            {% else %}
+                                <span class="tag-badge category">{{ product.category.name }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="product-body">
+                        <a href="{% url 'store:product_detail' product.slug %}">
+                            <h3 class="product-title">{{ product.name }}</h3>
+                        </a>
+                        
+                        <!-- Review Rating Summary -->
+                        <div class="product-rating">
+                            {% with rating=product.average_rating %}
+                                {% if rating > 0 %}
+                                    <i class="fa-solid fa-star"></i>
+                                    <span>{{ rating }} ★</span>
+                                {% else %}
+                                    <i class="fa-regular fa-star" style="color: var(--text-muted);"></i>
+                                    <span style="color: var(--text-muted);">No reviews</span>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+
+                        <!-- Price and Shopping Action -->
+                        <div class="product-price-wrapper">
+                            <div class="product-price">${{ product.price }}</div>
+                            {% if product.stock > 0 %}
+                                <a href="{% url 'store:cart_add' product.id %}" class="btn-icon" title="Add to Cart">
+                                    <i class="fa-solid fa-bag-shopping"></i>
+                                </a>
+                            {% else %}
+                                <button class="btn-icon" style="opacity: 0.4; cursor: not-allowed;" disabled title="Out of Stock">
+                                    <i class="fa-solid fa-ban"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Empty State Catalog -->
+        <div class="empty-state glass-panel">
+            <div class="empty-icon">
+                <i class="fa-solid fa-box-open"></i>
+            </div>
+            <h3>No Products Found</h3>
+            <p>We couldn't find any products fitting your request. Try adjusting your search query or filters.</p>
+            <a href="{% url 'store:store_view' %}" class="btn-primary">View All Products</a>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

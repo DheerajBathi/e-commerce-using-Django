@@ -1,0 +1,104 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AuraShop - Premium E-Commerce{% endblock %}</title>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Premium stylesheet link -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+    <!-- Django Alert Messages -->
+    <div class="messages-container" id="toast-container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message-toast glass-panel {{ message.tags }}">
+                    {% if message.tags == 'success' %}
+                        <i class="fa-solid fa-circle-check" style="color: var(--success)"></i>
+                    {% elif message.tags == 'warning' %}
+                        <i class="fa-solid fa-circle-exclamation" style="color: var(--warning)"></i>
+                    {% else %}
+                        <i class="fa-solid fa-circle-xmark" style="color: var(--danger)"></i>
+                    {% endif %}
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Navigation Header -->
+    <header>
+        <div class="container nav-wrapper">
+            <!-- Brand Logo -->
+            <a href="{% url 'store:store_view' %}" class="logo">
+                AuraShop<span class="logo-dot"></span>
+            </a>
+
+            <!-- Search Form -->
+            <div class="nav-search">
+                <form action="{% url 'store:store_view' %}" method="GET">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" name="q" placeholder="Search premium catalog..." value="{{ query|default:'' }}">
+                    {% if selected_category %}
+                        <input type="hidden" name="category" value="{{ selected_category.slug }}">
+                    {% endif %}
+                    {% if sort_by %}
+                        <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                    {% endif %}
+                </form>
+            </div>
+
+            <!-- Navigation Links -->
+            <div class="nav-links">
+                <a href="{% url 'store:store_view' %}" class="nav-link">
+                    <i class="fa-solid fa-store"></i> Store
+                </a>
+                
+                <a href="{% url 'store:cart_view' %}" class="nav-link cart-icon-wrapper">
+                    <i class="fa-solid fa-cart-shopping"></i> Cart
+                    <span class="cart-badge" id="cart-badge-count">{{ cart_count }}</span>
+                </a>
+                
+                <a href="/admin/" class="nav-link" target="_blank">
+                    <i class="fa-solid fa-user-gear"></i> Admin
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main style="flex: 1;">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 AuraShop. Designed for exceptional shopping experiences.</p>
+            <p>Made with <i class="fa-solid fa-heart" style="color: var(--danger); font-size: 11px;"></i> and Django.</p>
+        </div>
+    </footer>
+
+    <!-- Toast Fade-Out Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toasts = document.querySelectorAll('.message-toast');
+            toasts.forEach(toast => {
+                setTimeout(() => {
+                    toast.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(-20px)';
+                    setTimeout(() => toast.remove(), 600);
+                }, 4000);
+            });
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
